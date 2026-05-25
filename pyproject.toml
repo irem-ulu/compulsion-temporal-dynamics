@@ -20,5 +20,8 @@ dependencies = [
     "rich>=13",
 ]
 
+[project.scripts]
+ctd = "ctd.cli:app"
+
 [tool.setuptools.packages.find]
 where = ["src"]
