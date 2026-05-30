@@ -1,7 +1,7 @@
 import numpy as np
 
 from ctd.data.generate import SimConfig, generate_synthetic_data_v2
-from ctd.preprocess import preprocess, within_between_decompose
+from ctd.preprocess import add_time_features, preprocess, within_between_decompose
 
 
 def _df():
@@ -34,3 +34,21 @@ def test_compulsion_group_balanced():
     # Median split — each group should have at least one participant.
     counts = df.groupby("CompulsionGroup")["Participant"].nunique()
     assert (counts >= 1).all()
+
+
+def test_hour_of_day_default_window():
+    """Default 7am-7pm: bin 0 = 7.0, bin 11 = 18.0 (the last *sample*, not the end of the window)."""
+    df = add_time_features(_df(), n_bins=12)
+    by_bin = df.groupby("TimeBin")["HourOfDay"].first()
+    assert by_bin.loc[0] == 7.0
+    assert by_bin.loc[11] == 18.0
+
+
+def test_hour_of_day_custom_window():
+    """A 6am-10pm (16h) window should put bin 0 at 6.0 and the bins evenly spaced."""
+    df = add_time_features(_df(), n_bins=12, day_start_hour=6.0, day_length_hours=16.0)
+    by_bin = df.groupby("TimeBin")["HourOfDay"].first()
+    assert by_bin.loc[0] == 6.0
+    # Spacing between consecutive bins should be 16/12 hours.
+    diffs = np.diff(by_bin.values)
+    assert np.allclose(diffs, 16 / 12)

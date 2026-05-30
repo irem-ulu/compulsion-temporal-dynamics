@@ -22,14 +22,20 @@ def clean(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def add_time_features(df: pd.DataFrame, n_bins: int = 12) -> pd.DataFrame:
+def add_time_features(
+    df: pd.DataFrame,
+    n_bins: int = 12,
+    day_start_hour: float = 7.0,
+    day_length_hours: float = 12.0,
+) -> pd.DataFrame:
     df = df.copy()
     # Approximate morning/evening as the first and last quarters of the day.
     quarter = n_bins // 4
     df["IsMorning"] = df["TimeBin"].between(0, quarter - 1).astype(int)
     df["IsEvening"] = df["TimeBin"].between(n_bins - quarter, n_bins - 1).astype(int)
-    # Continuous time in hours, assuming the day runs 7am–7pm by default.
-    df["HourOfDay"] = 7 + 12 * df["TimeBin"] / n_bins
+    # Continuous time in hours. Defaults to a 7am–7pm sampling window which
+    # matches the simulator; override to match your real EMA schedule.
+    df["HourOfDay"] = day_start_hour + day_length_hours * df["TimeBin"] / n_bins
     return df
 
 
@@ -75,10 +81,20 @@ def within_between_decompose(
     return df
 
 
-def preprocess(df: pd.DataFrame, n_bins: int = 12) -> pd.DataFrame:
+def preprocess(
+    df: pd.DataFrame,
+    n_bins: int = 12,
+    day_start_hour: float = 7.0,
+    day_length_hours: float = 12.0,
+) -> pd.DataFrame:
     """One-shot preprocess used by the pipeline."""
     df = clean(df)
-    df = add_time_features(df, n_bins=n_bins)
+    df = add_time_features(
+        df,
+        n_bins=n_bins,
+        day_start_hour=day_start_hour,
+        day_length_hours=day_length_hours,
+    )
     df = assign_compulsion_groups(df)
     df = add_trait_features(df)
     df = within_between_decompose(df, ["Stress", "OutsideTime", "Compulsions"])

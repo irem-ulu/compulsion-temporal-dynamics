@@ -1,11 +1,14 @@
 """Render the data-generating DAG using matplotlib only — no graphviz dep.
 
 Reads :data:`ctd.data.generate.CAUSAL_DAG` so the picture is locked to
-the simulator. If you change the DGP, the figure updates.
+the simulator. If you change the DGP, the figure updates — unless you
+add a new node and forget to put it in :data:`LAYOUT`, in which case
+the renderer warns rather than silently dropping the edge.
 """
 
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -50,7 +53,12 @@ def render_dag(out_path: str | Path) -> Path:
         ax.text(x, y, label, ha="center", va="center",
                 bbox={**node_style, "fc": fill.get(label, "white")})
 
+    missing: set[str] = set()
     for src, dst, sign in CAUSAL_DAG:
+        if src not in LAYOUT:
+            missing.add(src)
+        if dst not in LAYOUT:
+            missing.add(dst)
         if src not in LAYOUT or dst not in LAYOUT:
             continue
         x1, y1 = LAYOUT[src]
@@ -64,6 +72,13 @@ def render_dag(out_path: str | Path) -> Path:
             connectionstyle="arc3,rad=0.08",
         )
         ax.add_patch(arrow)
+
+    if missing:
+        warnings.warn(
+            f"CAUSAL_DAG references nodes not in viz.dag.LAYOUT: {sorted(missing)}. "
+            "Add coordinates for them or the picture will be missing edges.",
+            stacklevel=2,
+        )
 
     ax.set_title("Data-generating DAG (green = positive, red = negative)")
 

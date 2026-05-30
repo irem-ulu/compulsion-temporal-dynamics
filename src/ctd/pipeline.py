@@ -96,6 +96,15 @@ def run(config: PipelineConfig | None = None) -> dict[str, Path]:
         cfg.results_dir / "within_between_correlations.txt",
     )
 
+    # Two summary tables the prototype saved — kept here as CSVs because
+    # they're often handy as inputs to downstream plotting / reporting.
+    time_series = df.groupby("TimeBin")["Stress"].mean().rename("Stress_mean").to_frame()
+    time_series.to_csv(cfg.results_dir / "time_series.csv")
+    artefacts["time_series"] = cfg.results_dir / "time_series.csv"
+    group_time = df.groupby(["CompulsionGroup", "TimeBin"])["Stress"].mean().unstack()
+    group_time.to_csv(cfg.results_dir / "group_time_series.csv")
+    artefacts["group_time_series"] = cfg.results_dir / "group_time_series.csv"
+
     log.info("Mixed-effects models")
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -156,11 +165,10 @@ def run(config: PipelineConfig | None = None) -> dict[str, Path]:
     artefacts["fig_group"] = group_stress_over_time(df, fig_dir / "group_stress.png")
     artefacts["fig_scatter"] = stress_vs_outside(df, fig_dir / "stress_vs_outside.png")
 
-    # Build a forest plot from the cluster bootstrap output by reframing
-    # mean / quantiles to the names coef_forest expects.
-    forest_df = boot.rename(columns={"beta_mean": "beta"})
     artefacts["fig_forest"] = coef_forest(
-        forest_df, fig_dir / "compulsion_forest.png",
+        boot,
+        fig_dir / "compulsion_forest.png",
+        beta_col="beta_mean",
         title="Compulsion model coefficients (cluster bootstrap 95% CI)",
     )
 

@@ -23,11 +23,18 @@ dependencies = [
 [project.scripts]
 ctd = "ctd.cli:app"
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=7",
+    "ruff>=0.4",
+    "pre-commit>=3",
+]
+dashboard = [
+    "streamlit>=1.30",
+]
+
 [tool.setuptools.packages.find]
 where = ["src"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
@@ -36,6 +43,18 @@ target-version = "py39"
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM"]
 ignore = [
-    "E501",
-    "B008",
+    "E501",  # long lines, formatted by hand for tables/comments
+    "B008",  # typer.Option() in defaults is the documented pattern
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = [
+    # matplotlib uses an old pyparsing API; not our problem and not our fix.
+    "ignore::DeprecationWarning:pyparsing.*",
+    "ignore:.*pyparsing.*:DeprecationWarning",
+    "ignore:.*oneOf.*deprecated.*",
+    "ignore:.*parseString.*deprecated.*",
+    "ignore:.*resetCache.*deprecated.*",
+    "ignore:.*enablePackrat.*deprecated.*",
 ]
